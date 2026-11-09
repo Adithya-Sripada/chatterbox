@@ -1,8 +1,6 @@
 # chatterbox
 
-A Small Language Model that learns how you chat on Twitch and suggests messages you'd say,
-including live, based on what's happening in a channel's chat right now. It only suggests
-and never posts to Twitch. Runs on Apple Silicon with MLX.
+A Small Language Model trained on my own chatlogs that suggests messages based on what's happening in a channel's chat right now.
 
 ## Setup (once)
 1. Put your Twitch username in `config.toml` (`username = "..."`).
@@ -15,7 +13,7 @@ and never posts to Twitch. Runs on Apple Silicon with MLX.
 .venv/bin/python src/parse_logs.py         # finds your messages + the chat before them
 .venv/bin/python src/build_dataset.py --show 10   # filters, splits, prints stats + samples
 ./train.sh                                  # LoRA fine-tune (20-60 min on M2)
-./train.sh eval                             # test loss: base model vs. your adapter
+./train.sh eval                             # test loss: base model vs. your adapter (takes ~1 minute)
 .venv/bin/python src/try_it.py --blind 20   # can you tell your real message from the model's?
 .venv/bin/python src/live.py <channel>      # live suggestions: Enter = suggest, q = quit
 ```

@@ -1,6 +1,6 @@
 # chatterbox
 
-A small local model that learns how you chat on Twitch and suggests messages you'd say,
+A Small Language Model that learns how you chat on Twitch and suggests messages you'd say,
 including live, based on what's happening in a channel's chat right now. It only suggests
 and never posts to Twitch. Runs on Apple Silicon with MLX.
 

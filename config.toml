@@ -1,5 +1,4 @@
-# Your Twitch username exactly as it appears in the logs (case doesn't matter).
-username = "Tahoetheyt"
+username = "YOUR_NAME"
 
 # Base model and LoRA adapter location.
 model = "mlx-community/Qwen2.5-3B-Instruct-4bit"

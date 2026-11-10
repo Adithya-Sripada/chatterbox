@@ -17,6 +17,10 @@ max_context_chars = 300
 # Your repeated identical messages within this many seconds count as spam and are dropped.
 repeat_window_seconds = 30
 
+# The test set (eval + blind test) comes from messages at least this many days old,
+# so you're not just recognizing chats you remember.
+test_min_age_days = 7
+
 # Generation settings.
 num_suggestions = 3
 temperature = 0.8

@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import PROCESSED_DIR  # noqa: E402
+from common import PROCESSED_DIR, ROOT  # noqa: E402
 from suggest import Chatterbox  # noqa: E402
 
 
@@ -29,7 +29,15 @@ def parse_lines(text: str) -> list[tuple[str, str]]:
 
 
 def blind_test(bot: Chatterbox, n: int):
-    rows = [json.loads(l) for l in open(PROCESSED_DIR / "test.jsonl", encoding="utf-8")]
+    test_file = PROCESSED_DIR / "test.jsonl"
+    rows = [json.loads(l) for l in open(test_file, encoding="utf-8")]
+    meta = json.loads((PROCESSED_DIR / "meta.json").read_text())
+    if meta.get("test_span"):
+        print(f"Blind test messages are from {meta['test_span']}.")
+    weights = ROOT / bot.cfg.get("adapter_path", "adapters") / "adapters.safetensors"
+    if bot.using_adapter and weights.stat().st_mtime < test_file.stat().st_mtime:
+        print("Warning: your adapter was trained before the dataset was last rebuilt, so it may have "
+              "seen these messages. Run ./train.sh again for a fair test.")
     rng = random.Random()
     rows = rng.sample(rows, min(n, len(rows)))
     correct = 0

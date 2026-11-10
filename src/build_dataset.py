@@ -8,13 +8,16 @@ Usage:  python src/build_dataset.py [--show 10]
 from __future__ import annotations
 
 import argparse
+import bisect
 import json
 import math
 import random
 import re
 import statistics
 import sys
+import time
 from collections import Counter
+from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -76,9 +79,27 @@ def main():
         raise SystemExit(f"Only {n} usable messages of yours after filtering; need at least 40 to train. "
                          "Add more logs to data/raw/.")
 
-    # Time-ordered split: oldest 90% train, then valid, newest test.
+    # Time-ordered split. The held-out block (valid, then test) is the newest stretch of
+    # messages that is at least test_min_age_days old, so the blind test isn't full of
+    # chats you still remember. Everything before it and after it is training data.
     n_eval = max(BATCH_SIZE, round(n * 0.05))
-    train, valid, test = kept[: n - 2 * n_eval], kept[n - 2 * n_eval: n - n_eval], kept[n - n_eval:]
+    min_age = cfg.get("test_min_age_days", 7)
+    cutoff = time.time() - min_age * 86400
+    end = bisect.bisect_left([e["ts"] for e in kept], cutoff)   # kept[:end] are old enough
+    if end - 2 * n_eval < n_eval:                                # not enough old history left to train on
+        print(f"Note: fewer than {3 * n_eval} messages are over {min_age} days old, "
+              "so the newest messages are held out instead.")
+        end = n
+    start = end - 2 * n_eval
+    valid, test = kept[start:start + n_eval], kept[start + n_eval:end]
+    # Training messages right after the test block can have test messages in their context
+    # window; skip those so the model never sees a test conversation.
+    gap_until = test[-1]["ts"] + ctx_s
+    after = [e for e in kept[end:] if e["ts"] > gap_until]
+    n_gap = n - end - len(after)
+    train = kept[:start] + after
+    day = lambda e: datetime.fromtimestamp(e["ts"]).strftime("%b %d")  # noqa: E731
+    test_span = f"{day(test[0])} – {day(test[-1])}"
 
     rng = random.Random(0)
     small = len(train) < SMALL_DATASET
@@ -101,7 +122,8 @@ def main():
     epoch = math.ceil(len(train) / BATCH_SIZE)
     iters = max(100, epoch) if small else min(MAX_ITERS, round(1.5 * epoch))
     meta = {"username": me, "n_train": len(train), "n_valid": len(valid), "n_test": len(test),
-            "batch_size": BATCH_SIZE, "recommended_iters": iters, "style_in_prompt": small}
+            "batch_size": BATCH_SIZE, "recommended_iters": iters, "style_in_prompt": small,
+            "test_span": test_span}
     (PROCESSED_DIR / "meta.json").write_text(json.dumps(meta, indent=2))
 
     # ---- report
@@ -109,7 +131,9 @@ def main():
     print(f"Your messages found: {total:,}")
     for reason, c in dropped.most_common():
         print(f"  dropped {c:>7,}  {reason}")
-    print(f"Kept: {n:,}  →  train {len(train):,} / valid {len(valid):,} / test {len(test):,}")
+    print(f"Kept: {n:,}  →  train {len(train):,} / valid {len(valid):,} / test {len(test):,}"
+          + (f"  ({n_gap} skipped: their context overlaps the test chats)" if n_gap else ""))
+    print(f"Test set (used by eval and the blind test): messages from {test_span}")
     lens = [len(e["text"]) for e in kept]
     print(f"Median message length: {statistics.median(lens):.0f} chars")
     with_ctx = sum(1 for e in kept if e["context"])

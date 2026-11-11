@@ -4,3 +4,4 @@ adapters/
 __pycache__/
 .DS_Store
 .idea/
+config.local.toml

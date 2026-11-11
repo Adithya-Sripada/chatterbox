@@ -115,9 +115,11 @@ def main():
         ]}
 
     for name, rows in (("train", train), ("valid", valid), ("test", test)):
-        with open(PROCESSED_DIR / f"{name}.jsonl", "w", encoding="utf-8") as f:
-            for e in rows:
-                f.write(json.dumps(to_chat(e), ensure_ascii=False) + "\n")
+        out = PROCESSED_DIR / f"{name}.jsonl"
+        content = "".join(json.dumps(to_chat(e), ensure_ascii=False) + "\n" for e in rows)
+        # Leave unchanged files alone so their timestamps still show whether the adapter is current.
+        if not out.exists() or out.read_text(encoding="utf-8") != content:
+            out.write_text(content, encoding="utf-8")
 
     epoch = math.ceil(len(train) / BATCH_SIZE)
     iters = max(100, epoch) if small else min(MAX_ITERS, round(1.5 * epoch))

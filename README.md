@@ -3,7 +3,7 @@
 A Small Language Model trained on my own chatlogs that suggests messages based on what's happening in a channel's chat right now.
 
 ## Setup (once)
-1. Put your Twitch username in `config.toml` (`username = "..."`).
+1. Create `config.local.toml` with your Twitch username (`username = "..."`). It overrides `config.toml` and is not committed.
 2. Copy your chat logs into `data/raw/` (any folder layout; full-channel logs are best).
    Supported: Chatterino, justlog/rustlog, raw IRC, TwitchDownloader JSON/text,
    chat-downloader JSON(L), CSV, and .gz versions of those.

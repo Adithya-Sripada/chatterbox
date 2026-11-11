@@ -17,6 +17,10 @@ URL_RE = re.compile(r"https?://\S+|www\.\S+", re.I)
 def load_config() -> dict:
     with open(ROOT / "config.toml", "rb") as f:
         cfg = tomllib.load(f)
+    local = ROOT / "config.local.toml"        # gitignored: personal settings like your username
+    if local.exists():
+        with open(local, "rb") as f:
+            cfg.update(tomllib.load(f))
     cfg["bots"] = {b.lower() for b in cfg.get("bots", [])}
     cfg["username"] = (os.environ.get("CHATTERBOX_USERNAME") or cfg.get("username", "")).strip().lstrip("@").lower()
     return cfg
@@ -24,8 +28,9 @@ def load_config() -> dict:
 
 def require_username(cfg: dict) -> str:
     user = cfg["username"]
-    if not user or user == "change_me":
-        raise SystemExit('Set your Twitch username in config.toml (username = "...") first.')
+    if not user or user in ("change_me", "your_name"):
+        raise SystemExit('Set your Twitch username first: create config.local.toml containing '
+                         'username = "yourname" (or edit config.toml).')
     return user
 
 

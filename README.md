@@ -20,7 +20,7 @@ A Small Language Model trained on my own chatlogs that suggests messages based o
 `live.py` options: `--auto 20` refreshes every 20 s while chat moves; `--show-chat` prints chat as it arrives.
 
 The test set used by `train.sh eval` and the blind test is the newest stretch of your
-messages that's at least a week old (`test_min_age_days` in `config.toml`), so you aren't
+messages that's at least `test_min_age_days` old (set in `config.toml`), so you aren't
 just recognizing chats you remember. Your newer messages still go into training. After
 rebuilding the dataset, run `./train.sh` again before testing, or the old adapter may
 already have seen the test messages.

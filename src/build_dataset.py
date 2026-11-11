@@ -33,6 +33,8 @@ WORD_RE = re.compile(r"\S+")
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--show", type=int, default=0, help="print N random training examples to spot-check")
+    ap.add_argument("--resample-style", action="store_true",
+                    help="replace the style examples in style_examples.json with random new ones")
     args = ap.parse_args()
 
     cfg = load_config()
@@ -103,9 +105,20 @@ def main():
 
     rng = random.Random(0)
     small = len(train) < SMALL_DATASET
-    pool = sorted({e["text"] for e in train if 3 <= len(e["text"]) <= 80})
-    style = rng.sample(pool, min(10, len(pool)))
-    STYLE_FILE.write_text(json.dumps({"use_in_prompt": small, "examples": style}, indent=2, ensure_ascii=False))
+    # Keep examples you've picked by hand in style_examples.json; only pick random ones
+    # the first time or when asked with --resample-style.
+    old = json.loads(STYLE_FILE.read_text(encoding="utf-8")) if STYLE_FILE.exists() else {}
+    if old.get("examples") and not args.resample_style:
+        style = old["examples"]
+    else:
+        pool = sorted({e["text"] for e in train if 3 <= len(e["text"]) <= 80})
+        style = rng.sample(pool, min(10, len(pool)))
+    new_style = {"use_in_prompt": small, "examples": style}
+    if new_style != old:
+        STYLE_FILE.write_text(json.dumps(new_style, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    in_test = {e["text"] for e in test}
+    if leaked := [m for m in style if m in in_test]:
+        print(f"Note: these style examples are also test-set answers, which makes the blind test too easy: {leaked}")
 
     def to_chat(e):
         return {"messages": [
